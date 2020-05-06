@@ -7,5 +7,6 @@ type Enemy struct {
 	Condition string
 	CombatRating int
 	CombatAccuracy int
+	Initiative int
 	Loot Item
 } 

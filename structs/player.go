@@ -6,7 +6,9 @@ type Player struct {
 	Armor Armor
 	Weapon Weapon
 	HealthRating int
+	CurrentHealth int
 	Condition string
 	Attributes Attribute
+	Proficiencies Proficiencies
 	Feats []Feat
 }

@@ -8,7 +8,7 @@ type Room struct {
 	Locked bool
 	PlayerCover int
 	EnemyCover int
-	Enemies []Enemy
+	Enemies []*Enemy
 	Discoveries []Discovery
 	Edges []string
 	Key string

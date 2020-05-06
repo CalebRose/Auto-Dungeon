@@ -13,6 +13,7 @@ import (
 	"log"
 	"math/rand"
 	"math"
+	"sort"
 	"time"
 )
 
@@ -33,29 +34,169 @@ func main() {
 		log.Fatalf("app.Firestore: %v", err)
 	}
 
-
-
-
-	// Configure to Firebase
-
 	// Load Assets
 	party := structs.Party {
 		Name: "Main",
 		Description: "Just a description",
-		Members: []structs.Player{},
+		CurrentRoom: "TestRoom"
+		Members: []*structs.Player{},
+		Objectives: []*structs.Objective{},
 		Value: 0,
 	}
 	// Players
-	// LoadPlayers()
-		// Rooms
+	docsnap := client.Collection("Players").Documents(ctx)
 
-		// Map rooms to Graph
+	defer docsnap.Stop()
 
-		// Starting Room
+	// Map players to party
+	for {
+		doc, err := docsnap.Next()
 
-		// Assign Objectives
+		if doc == nil {
+			break
+		}
+		if err != nil {
+			log.Fatalf("Something went wrong %v", err)
+		}
 
-	// Loop
+		var player structs.Player
+		doc.DataTo(&player)
+
+		party.Members = append(party.Members, &player)
+	}	
+	fmt.Println(party)
+	// Rooms
+	graph := structs.Graph {
+		AdjList: map[string]*structs.Room{},
+	}
+
+	testRoom := structs.Room {
+		Name: "TestRoom",
+		RoomType: "StartingRoom",
+		RoomConditions: "?",
+		Visited: false,
+		Locked: false,
+		PlayerCover: 3,
+		EnemyCover: 0,
+		Enemies: []*structs.Enemy{},
+		Discoveries: []structs.Discovery{},
+		Edges: []string{"TestRoom2"},
+		Key: "Room1",
+	}
+
+	testRoom2 := structs.Room {
+		Name: "TestRoom2",
+		RoomType: "Room",
+		RoomConditions: "?",
+		Visited: false,
+		Locked: false,
+		PlayerCover: 3,
+		EnemyCover: 0,
+		Enemies: []*structs.Enemy{},
+		Discoveries: []structs.Discovery{},
+		Edges: []string{},
+		Key: "Room2",
+	}
+	// Map rooms to Graph
+	graph.AddVertex(&testRoom)
+	graph.AddVertex(&testRoom2)
+	fmt.Println(graph)
+	// Starting Room
+	party.CurrentRoom = InitializeStartingPoint(graph.AdjList)
+	path := []string {party.CurrentRoom}
+	// Assign Objectives
+
+	// The Loop
+	for CheckObjectives(party.Objectives) == false {
+		// Check Room
+		currentRoom := graph.AdjList[party.CurrentRoom]
+		currentRoom.Visited = true
+		// Check for Enemies
+		if(len(currentRoom.Enemies) > 0) {
+			// Initiate Battle
+			InitializeBattle(party.Members, currentRoom.Enemies)
+		}
+
+		// Check if at least one member of the party is alive
+		// Otherwise, break loop
+		
+		// Check for Discoveries
+		if(len(currentRoom.Discoveries) > 0) {
+			// Roll for Discoveries
+			// Loop through each player and run a check on discovering something
+		}
+
+		// Check Objectives
+			// Check on whether party needed to be in room
+			// Loop through player objectives 
+
+
+		// Check for adjacent rooms
+		if(len(currentRoom.Edges) > 0) {
+			if(len(currentRoom.Edges) == 1) {
+				// If there is only one adjacent room
+				// Add current room to path taken
+				path = append(path, party.CurrentRoom)
+				// Traverse into room
+				party.CurrentRoom = currentRoom.Edges[0]
+			} else if (len(currentRoom.Edges) == 0) {
+				// Else if there are no adjacent rooms
+				// Traverse Backwards through Path
+				lastRoom := len(path) - 1
+				party.CurrentRoom = path[lastRoom]
+				// Remove last room from array
+				path = path[:lastRoom]
+			} else {
+				// Else if there is more than one adjacent room
+					// Choose a Room
+				unchosen := true
+				safety_iterator := 0
+				for unchosen == true {
+					safety_iterator++
+					random_pick := rand.Intn(len(currentRoom.Edges))
+					chosenRoom := currentRoom.Edges[random_pick]
+					if(graph.AdjList[chosenRoom].Visited == false) {
+						unchosen = false
+						path = append(path, party.CurrentRoom)
+						party.CurrentRoom = chosenRoom
+					}
+					if(safety_iterator > len(currentRoom.Edges) * 2) {
+						// Safety precaution to prevent infinite loop. Just go back one
+						for i := 0; i < len(currentRoom.Edges); i++ {
+							iteratedRoom = currentRoom.Edges[i]
+							if(graph.AdjList[iteratedRoom].Visited == false) {
+								path = append(path, party.CurrentRoom)
+								party.CurrentRoom = chosenRoom
+								unchosen = false
+								break
+							}
+						}
+						if(unchosen == false) {
+							break
+						} else {
+							// Traverse backwards
+							lastRoom := len(path) - 1
+							party.CurrentRoom = path[lastRoom]
+							// Remove last room from array
+							path = path[:lastRoom]
+							break
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// So at this point all main objectives were either completed or the party is dead
+	// If victory achieved
+		// Congrats! Mission completed! You all did it!
+		// Log the victory 
+	// Else
+		// Log defeat
+
+	// Log status of each player
+	// Update all player objects into Firebase
+
 
 
 	enemyOne := structs.Enemy {
@@ -72,38 +213,116 @@ func main() {
 			Value: 30,
 		},
 	}
-	fmt.Println("Player One: " + playerOne.Condition)
-	fmt.Println("Enemy: " + enemyOne.Condition)
 
-
-	// fmt.Println(party)
-	// fmt.Println(playerOne)
-	// fmt.Println(playerOne.Weapon.Value > playerTwo.Weapon.Value)
-	// fmt.Println(playerTwo)
+	testRoom.Enemies = append(testRoom.Enemies, &enemyOne)
 
 }
 
-func InitializeBattle (players [] struc.Player, enemies []structs.Enemy) {
+func CheckObjectives(Objectives []structs.Objective) bool {
+	totalObj := len(Objectives)
+	completedObj := 0
+	for _, obj := Objectives {
+		if(obj.Fulfilled === true) {
+			completedObj++
+		}
+	}
+	if(completedObj == totalObj)
+		return true
+	else
+		return false
+}
+
+func InitializeStartingPoint(rooms map[string]){
+	for _, i := rooms {
+		if(i.RoomType == "Start") {
+			return i.Key
+		}
+	}
+	return "NONE"
+}
+
+func InitializeBattle(players [] structs.Player, enemies []structs.Enemy) {
 	//Take in slice of players & slice of enemies
 	// Use Battle Queue Struct instead of map
-	// create a slice to take in a map with a name, type, and initiative. Generate initiative based on player's perception
+	// create a slice to take in a struct with a name, type, and initiative. Generate initiative based on player's perception
+	battleQueue := []structs.BattleQueue{}
+	for i:= 0; i < len(players); i++ {
+		playerQueue := structs.BattleQueue {
+			Name: players[i].Name,
+			CombatantType: "Player",
+			EnemyType: "",
+			Initiative: rand.Intn(players[i].Attributes.Perception) + 1,
+		}
+		battleQueue = append(battleQueue, playerQueue)
+	}
 
-	// Sort the slice from highest initiative to lowest. Confirm whether it's possible to sort a number in string form
+	for i:= 0; i < len(enemies); i++ {
+		enemyQueue := structs.BattleQueue {
+			Name: enemies[i].Name,
+			CombatantType: "Enemy",
+			EnemyType: enemies[i].EnemyType,
+			Initiative: enemies[i].Initiative,
+		}
+		battleQueue = append(battleQueue, enemyQueue)
+	}
+	// Sort the slice from highest initiative to lowest
 	// FOR LATER -- do a feat check for players w/ sleight of hand
+	battleSlice := battleQueue[:]
+	sort.Slice(battleSlice, func(i,j int) bool {
+		return battleSlice[i].Initiative > battleSlice[j].Initiative
+	})
 
-	// Utilize slice as a 'queue'
-
+	playerCount := len(players)
+	enemyCount := len(enemies)
 	// while all players are not dead || all enemies are not dead
+	for playerCount > 0 && enemyCount > 0 {
+		// pop from the beginning of the queue
+		battleNode, battleSlice := battleSlice[0], battleSlice[1:]
 
-	// pop from the beginning of the queue
+		// Check whether the map received is a player or enemy
+		// If player, randomly select an enemy from the enemies array. If enemy, randomly select a player from the players array
 
-	// Check whether the map received is a player or enemy
+		if(battleNode.CombatantType == "Player") {
+			player := FindPlayer(players, battleNode)
+			chosenEnemy := rand.Intn(len(enemies))
+			SingularBattle(player, enemies[chosenEnemy])
+		} else if (battleNode.CombatantType == "Enemy") {
+			enemy := FindEnemy(enemies, battleNode)
+			chosenPlayer := rand.Intn(len(players))
+			SingularBattle(players[chosenPlayer], enemy)
+		}
 
-	// If player, randomly select an enemy from the enemies array. If enemy, randomly select a player from the players array
+		battleSlice = append(battleSlice, battleNode)
+		// Loop should break when either all enemies are defeated / mortally wounded, or all players are unable to fight
+	}
+	
 
-	// Utilize SingularBattle function. Include boolean for player/enemy turn as parameter to signify whether an enemy or player is attacking
+	
 
-	// Loop should break when either all enemies are defeated / mortally wounded, or all players are unable to fight
+}
+
+func FindEnemy(enemies []structs.Enemy, battleNode structs.BattleQueue)  structs.Enemy {
+	// Find the enemy for singular battle
+	i := 0
+	for i < len(enemies){
+		if battleNode.Name == enemies[i].Name {
+			break		
+		}
+		i++
+	}
+	return enemies[i]
+}
+
+func FindPlayer(players []structs.Player, battleNode structs.BattleQueue) structs.Player {
+	// Find the player for Singular Battle
+	i := 0
+	for i < len(players) {
+		if battleNode.Name == players[i].Name {
+			break
+		}
+		i++
+	}
+	return players[i]
 }
 
 func SingularBattle(player structs.Player, enemy structs.Enemy) {
@@ -111,7 +330,6 @@ func SingularBattle(player structs.Player, enemy structs.Enemy) {
 	
 	// Establish Base Values & Variables
 	playerBaseStrength := player.Attributes.Strength + player.Weapon.WeaponRating
-
 	enemyBaseStrength := enemy.CombatRating
 
 	fmt.Println("Player Base Strength:", playerBaseStrength)
@@ -169,22 +387,22 @@ func SingularBattle(player structs.Player, enemy structs.Enemy) {
 			difference = currentPlayerStrength - currentEnemyStrength
 			fmt.Println("Player was stronger. Difference:", difference)
 			if difference > enemyBaseStrength {
-				enemyOne.Condition = "Dead"
+				enemy.Condition = "Dead"
 			} else if float64(difference) > math.Floor(float64(enemyBaseStrength) * 0.5) {
-				enemyOne.Condition = "Major Injury"
+				enemy.Condition = "Major Injury"
 			} else {
-				enemyOne.Condition = "'Tis but a scratch"
+				enemy.Condition = "'Tis but a scratch"
 			}
 			// if the enemy's strength is greater than 0
 		} else if currentPlayerStrength < currentEnemyStrength {
 			difference = currentEnemyStrength - currentPlayerStrength
 			fmt.Println("Enemy was stronger. Difference:", difference)
 			if difference > player.HealthRating {
-				playerOne.Condition = "Dead"
-			} else if float64(difference) > math.Floor(float64(playerOne.HealthRating) * 0.5) {
-				playerOne.Condition = "Major Injury"
-			} else if float64(difference) > math.Floor(float64(playerOne.HealthRating) * 0.2) {
-				playerOne.Condition = "Minor Injury"
+				player.Condition = "Dead"
+			} else if float64(difference) > math.Floor(float64(player.HealthRating) * 0.5) {
+				player.Condition = "Major Injury"
+			} else if float64(difference) > math.Floor(float64(player.HealthRating) * 0.2) {
+				player.Condition = "Minor Injury"
 			} else {
 				// Tis but a scratch
 			}
@@ -192,29 +410,4 @@ func SingularBattle(player structs.Player, enemy structs.Enemy) {
 			// It is a draw
 		}
 	}	
-}
-
-func LoadPlayers(){
-	docsnap := client.Collection("Players").Documents(ctx)
-
-	defer docsnap.Stop()
-
-	// Map players to party
-	for {
-		doc, err := docsnap.Next()
-
-		if doc == nil {
-			break
-		}
-
-		if err != nil {
-			log.Fatalf("Something went wrong %v", err)
-		}
-
-		var player structs.Player
-
-		doc.DataTo(&player)
-
-		party.Members = append(party.Members, player)
-	}
 }

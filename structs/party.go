@@ -3,6 +3,8 @@ package structs
 type Party struct {
 	Name string
 	Description string
-	Members []Player
+	CurrentRoom string
+	Members []*Player
+	Objectives []*Objective
 	Value int
 } 
