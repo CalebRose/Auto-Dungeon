@@ -406,7 +406,17 @@ func FindPlayer(players []*structs.Player, battleNode structs.BattleQueue) *stru
 // SingularBattle : A turn of Battle between a player and an enemy.
 func SingularBattle(player *structs.Player, enemy *structs.Enemy, playerTurn bool) (*structs.Player, *structs.Enemy) {
 	// Establish Base Values & Variables
-	playerBaseStrength := player.Attributes.Strength + player.Weapon.WeaponRating
+	coreStrength := 0
+	if player.Weapon.WeaponType == "Rifle" ||
+		player.Weapon.WeaponType == "Pistol" ||
+		player.Weapon.WeaponType == "Shotgun" ||
+		player.Weapon.WeaponType == "SniperRifle" {
+		coreStrength = player.Attributes.Dexterity
+	} else {
+		coreStrength = player.Attributes.Strength
+	}
+
+	playerBaseStrength := coreStrength + player.Weapon.WeaponRating
 	enemyBaseStrength := enemy.CombatRating
 	currentPlayerStrength := 0
 	currentEnemyStrength := 0
@@ -482,22 +492,26 @@ func SingularBattle(player *structs.Player, enemy *structs.Enemy, playerTurn boo
 
 // DamageCalculation - calculate damage dealt between two adversaries
 func DamageCalculation(Damage int, currentHitpoints int, Hitpoints int) (int, string) {
-	//
 	if Damage > currentHitpoints {
 		return 0, "Dead"
 	}
 	currHP := currentHitpoints - Damage
 	condition := ""
-	if float64(currHP) > math.Floor(float64(Hitpoints)*0.8) {
+	if float64(currHP) > math.Floor(float64(Hitpoints)*0.8) && currHP < Hitpoints {
 		condition = "Barely Scratched"
+		currHP = Hitpoints
 	} else if float64(currHP) > math.Floor(float64(Hitpoints)*0.6) {
 		condition = "Minorly Injured"
+		currHP = int(float64(Hitpoints) * 0.8)
 	} else if float64(currHP) > math.Floor(float64(Hitpoints)*0.4) {
 		condition = "Major Injury"
+		currHP = int(float64(Hitpoints) * 0.6)
 	} else if float64(currHP) > math.Floor(float64(Hitpoints)*0.2) {
 		condition = "Severely Injured"
+		currHP = int(float64(Hitpoints) * 0.4)
 	} else {
 		condition = "Mortally Wounded"
+		currHP = int(float64(Hitpoints) * 0.2)
 	}
 
 	return currHP, condition

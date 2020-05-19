@@ -1,15 +1,17 @@
 package structs
 
+// Graph - Map Structure for missions
 type Graph struct {
-	AdjList map[string] *Room
+	AdjList map[string]*Room
 }
 
+// AddVertex - Adding Rooms to the map
 func (g *Graph) AddVertex(v1 *Room) {
 	name := v1.Key
 	_, found := g.AdjList[name]
 	if found == true {
 		return
-	}		
+	}
 	g.AdjList[name] = v1
 }
 

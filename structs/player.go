@@ -1,20 +1,21 @@
 package structs
 
+// Player - structure for player character
 type Player struct {
-	Name string
-	Profession string
-	Armor Armor
-	Weapon Weapon
-	HealthRating int
-	CurrentHealth int
-	Condition string
-	Level int
-	Attributes Attribute
-	Proficiencies Proficiencies
-	Experience int
+	Name               string
+	Profession         string
+	Armor              Armor
+	Weapon             Weapon
+	HealthRating       int
+	CurrentHealth      int
+	Condition          string
+	Level              int
+	Attributes         Attribute
+	Proficiencies      Proficiencies
+	Experience         int
 	ExperienceRequired int
-	InCover bool
-	Ready bool
+	InCover            bool
+	Ready              bool
 
 	Feats []Feat
 }
