@@ -2,7 +2,9 @@ package structs
 
 type Objective struct {
 	Name string
+	ObjectiveType string
 	Description string
 	Fulfilled bool
-	Conditions []string
+	Condition string
+	Target string
 } 

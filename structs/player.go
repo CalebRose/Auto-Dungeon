@@ -8,7 +8,13 @@ type Player struct {
 	HealthRating int
 	CurrentHealth int
 	Condition string
+	Level int
 	Attributes Attribute
 	Proficiencies Proficiencies
+	Experience int
+	ExperienceRequired int
+	InCover bool
+	Ready bool
+
 	Feats []Feat
 }

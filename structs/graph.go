@@ -5,7 +5,7 @@ type Graph struct {
 }
 
 func (g *Graph) AddVertex(v1 *Room) {
-	name := v1.Name
+	name := v1.Key
 	_, found := g.AdjList[name]
 	if found == true {
 		return

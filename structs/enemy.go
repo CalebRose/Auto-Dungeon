@@ -5,8 +5,11 @@ type Enemy struct {
 	Description string
 	EnemyType string
 	Condition string
+	HitPoints int
+	CurrentHP int
 	CombatRating int
 	CombatAccuracy int
 	Initiative int
+	InCover bool
 	Loot Item
 } 

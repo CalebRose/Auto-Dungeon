@@ -3,6 +3,7 @@ package structs
 type Room struct {
 	Name string
 	RoomType string
+	Description string
 	RoomConditions string
 	Visited bool
 	Locked bool
