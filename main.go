@@ -12,7 +12,7 @@ import (
 
 	battle "github.com/calebrose/Auto-Dungeon/BattleFunctions"
 	dis "github.com/calebrose/Auto-Dungeon/DiscoveryFunctions"
-	mis "github.com/calebrose/Auto-Dungeon/MissionData"
+	mis "github.com/calebrose/Auto-Dungeon/Mission"
 	obj "github.com/calebrose/Auto-Dungeon/ObjectiveFunctions"
 	"github.com/calebrose/Auto-Dungeon/configu"
 	"github.com/calebrose/Auto-Dungeon/structs"
