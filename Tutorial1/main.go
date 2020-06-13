@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/calebrose/Auto-Dungeon/Tutorial1/strutil"
-	"strconv"
 	"math"
+	"strconv"
+
+	"github.com/calebrose/Auto-Dungeon/Tutorial1/strutil"
 )
 
 func greeting(name string) string {
@@ -16,7 +17,7 @@ func getSum(a, b int) int {
 }
 
 func arrays() {
-	var fruitArr [2] string
+	var fruitArr [2]string
 
 	// Assign values
 	fruitArr[0] = "apple"
@@ -26,16 +27,17 @@ func arrays() {
 	fmt.Println(fruitArr[1])
 
 	// Declare & assign
-	fruitArr2 := [2]string {"banana", "peach"}
+	fruitArr2 := [2]string{"banana", "peach"}
 	fmt.Println(fruitArr2)
 
-	fruitSlice := []string {"grape", "pear", "mango", "cherry"}
+	fruitSlice := []string{"grape", "pear", "mango", "cherry"}
 	fmt.Println(fruitSlice)
 	fmt.Println(len(fruitSlice))
 	fmt.Println(fruitSlice[1:3])
 }
 
-func Conditionals () {
+// Conditionals - shows conditions
+func Conditionals() {
 	x := 10
 	y := 10
 
@@ -64,7 +66,7 @@ func Conditionals () {
 	}
 }
 
-func loops(){
+func loops() {
 	// Long Method
 	// i := 1
 	// for i <= 10 {
@@ -78,11 +80,11 @@ func loops(){
 
 	// fizz buzz
 	for k := 0; k <= 100; k++ {
-		if k % 15 ==0 {
+		if k%15 == 0 {
 			fmt.Println("Fizz Buzz")
-		} else if k % 3 == 0{
+		} else if k%3 == 0 {
 			fmt.Println("Fizz")
-		} else if k % 5 == 0 {
+		} else if k%5 == 0 {
 			fmt.Println("Buzz")
 		} else {
 			fmt.Println(k)
@@ -100,13 +102,13 @@ func maps() {
 	// // // Delete
 	// // delete(emails, "Bob")
 	// Declare map
-	emails := map[string]string{"Bob":"bob@gmail.com", "Mike":"mike@gmail.com"}
+	emails := map[string]string{"Bob": "bob@gmail.com", "Mike": "mike@gmail.com"}
 	fmt.Println(emails)
 }
 
 func ranger() {
 	// To Loop Throughs Arrays & Maps
-	ids := []int {33,76,54,23,11,2}
+	ids := []int{33, 76, 54, 23, 11, 2}
 
 	for i, id := range ids {
 		fmt.Printf("%d - ID: %d\n", i, id)
@@ -123,7 +125,7 @@ func ranger() {
 	fmt.Println("Sum", sum)
 
 	// Maps
-	emails := map[string]string{"Bob":"bob@gmail.com", "Mike":"mike@gmail.com"}
+	emails := map[string]string{"Bob": "bob@gmail.com", "Mike": "mike@gmail.com"}
 
 	for k, v := range emails {
 		fmt.Printf("%s: %s\n", k, v)
@@ -134,7 +136,7 @@ func ranger() {
 	}
 }
 
-func pointers(){
+func pointers() {
 	a := 5
 	b := &a
 
@@ -165,12 +167,13 @@ func closures() {
 	}
 }
 
+// Person - example of struct
 type Person struct {
 	firstName string
-	lastName string
-	age int
-	city string
-	gender string
+	lastName  string
+	age       int
+	city      string
+	gender    string
 }
 
 func (p Person) greet() string {
@@ -181,12 +184,11 @@ func (p *Person) hasBirthday() {
 	p.age++
 }
 
-func(p * Person) gotMarried(spouseLastName string){
+func (p *Person) gotMarried(spouseLastName string) {
 	if p.gender == "M" {
 		return
-	} else {
-		p.lastName = spouseLastName
 	}
+	p.lastName = spouseLastName
 }
 
 func structures() {
@@ -202,14 +204,17 @@ func structures() {
 	fmt.Println(Kate)
 }
 
+// Shape - interface example
 type Shape interface {
 	area() float64
 }
 
+// Circle - example for interface
 type Circle struct {
 	x, y, radius float64
 }
 
+// Rectangle - example for interface
 type Rectangle struct {
 	width, height float64
 }
@@ -228,8 +233,8 @@ func getArea(s Shape) float64 {
 
 func interfaces() {
 	// A template for structs -- datatypes that represent a set of method signatures for structs
-	circle := Circle {0, 0, 5}
-	rectangle := Rectangle {10, 5}
+	circle := Circle{0, 0, 5}
+	rectangle := Rectangle{10, 5}
 
 	fmt.Printf("Circle Area: %f\n", getArea(circle))
 	fmt.Printf("Rectangle Area: %f\n", getArea(rectangle))
@@ -244,15 +249,15 @@ func main() {
 	interfaces()
 }
 
-/* 
+/*
 	Variables
 
 */
 
-/* Packages 
+/* Packages
 
 
-*/
+ */
 
 /* Functions
 Very straightforward
@@ -260,7 +265,7 @@ Very straightforward
 
 */
 
-/* Arrays & Slices 
+/* Arrays & Slices
 Arrays have to be a fixed length, and types need to be named.
 
 Slices are arrays that don't have a fixed type

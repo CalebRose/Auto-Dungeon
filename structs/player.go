@@ -6,16 +6,22 @@ type Player struct {
 	Profession         string
 	Armor              Armor
 	Weapon             Weapon
+	Attributes         Attribute
+	Proficiencies      Proficiencies
+	Behavior           Behaviors
+	Stats              Stats
+	Inventory          []Item
+	Holster            []Weapon
+	InventoryLimit     int
+	HolsterLimit       int
+	Level              int
+	Experience         int
+	ExperienceRequired int
 	HealthRating       int
 	CurrentHealth      int
 	Condition          string
-	Level              int
-	Attributes         Attribute
-	Proficiencies      Proficiencies
-	Experience         int
-	ExperienceRequired int
 	InCover            bool
 	Ready              bool
-
-	Feats []Feat
+	HasFought          bool
+	Feats              []Feat
 }

@@ -7,11 +7,13 @@ import (
 	// "firebase.google.com/go/auth"
 	"fmt"
 	"log"
-	"math"
 	"math/rand"
-	"sort"
 	"time"
 
+	battle "github.com/calebrose/Auto-Dungeon/BattleFunctions"
+	dis "github.com/calebrose/Auto-Dungeon/DiscoveryFunctions"
+	mis "github.com/calebrose/Auto-Dungeon/MissionData"
+	obj "github.com/calebrose/Auto-Dungeon/ObjectiveFunctions"
 	"github.com/calebrose/Auto-Dungeon/configu"
 	"github.com/calebrose/Auto-Dungeon/structs"
 	"golang.org/x/net/context"
@@ -36,24 +38,41 @@ func main() {
 	}
 
 	// Load Assets
+	Mission := mis.Mission{
+		MissionName:        "Test Mission",
+		Location:           "The Walderlund",
+		MissionEnemies:     []structs.Enemy{},
+		MissionDiscoveries: []*structs.Discovery{},
+	}
 	partyObjective := structs.Objective{
-		Name:          "Test",
-		ObjectiveType: "Location",
-		Description:   "Party needs to reach this room",
-		Fulfilled:     false,
-		Condition:     "",
-		Target:        "TestRoom2",
+		Name:           "Test",
+		ObjectiveType:  "Location",
+		Description:    "Party needs to reach this room",
+		Fulfilled:      false,
+		Condition:      "",
+		TargetLocation: "TestRoom",
 	}
 	party := structs.Party{
-		Name:        "Main",
-		Description: "Just a description",
-		CurrentRoom: "TestRoom",
-		Members:     []*structs.Player{},
-		Objectives:  []*structs.Objective{&partyObjective},
-		Value:       0,
+		Name:          "Main",
+		Description:   "Just a description",
+		CurrentRoom:   "TestRoom",
+		Members:       []*structs.Player{},
+		Objectives:    []*structs.Objective{&partyObjective},
+		Targets:       []*structs.Target{},
+		IsStealth:     true,
+		EscapeRoute:   []string{"TestRoom"},
+		InRetreat:     false,
+		MissionStatus: false,
+		PartyBehavior: structs.PartyBehavior{
+			PartyCuriosity:  0,
+			PartyDiscovery:  0,
+			PartyPersuasion: 0,
+		},
 	}
 	// Players
-	docsnap := client.Collection("Players").Documents(ctx)
+	// docsnap := client.Collection("Players").Documents(ctx)
+	// Grabs all players that are set to "Ready"
+	docsnap := client.Collection("Players").Where("Ready", "==", true).Documents(ctx)
 
 	defer docsnap.Stop()
 
@@ -73,23 +92,41 @@ func main() {
 
 		party.Members = append(party.Members, &player)
 	}
-	fmt.Println(party)
+	// Set Party Behaviors
+	party.SetBehaviors(party.Members)
+
+	// Load Global Data
+	Mission.LoadEnemies()
+	Mission.LoadDiscoveries()
+
+	// globalEnemies := []structs.Enemy{}
+	// globalEnemies = dungeondata.LoadEnemies()
+
+	// Global Discoveries List
+	// globalDiscoveries := []*structs.Discovery{}
+	// globalDiscoveries = dungeondata.LoadDiscoveries()
+
 	// Rooms
 	graph := structs.Graph{
 		AdjList: map[string]*structs.Room{},
 	}
 
+	// Load Rooms Here
+
 	testRoom := structs.Room{
 		Name:           "TestRoom",
 		RoomType:       "Start",
 		RoomConditions: "?",
+		Description:    "This is a test room",
 		Visited:        false,
 		Locked:         false,
+		Continuous:     false,
 		PlayerCover:    3,
 		EnemyCover:     0,
+		InitEnemyCount: 0,
 		Enemies:        []*structs.Enemy{},
-		Discoveries:    []structs.Discovery{},
-		Edges:          []string{"Room2", "Room3"},
+		Discoveries:    []*structs.Discovery{},
+		Edges:          []string{"Room2"},
 		Key:            "Room1",
 	}
 
@@ -97,35 +134,18 @@ func main() {
 		Name:           "TestRoom2",
 		RoomType:       "Room",
 		RoomConditions: "?",
+		Description:    "This is a test room",
 		Visited:        false,
 		Locked:         false,
+		Continuous:     false,
 		PlayerCover:    3,
 		EnemyCover:     0,
+		InitEnemyCount: 3,
 		Enemies:        []*structs.Enemy{},
-		Discoveries:    []structs.Discovery{},
+		Discoveries:    []*structs.Discovery{},
 		Edges:          []string{},
 		Key:            "Room2",
 	}
-	enemyOne := structs.Enemy{
-		Name:           "Thief",
-		Description:    "A petty thief from the streets.",
-		EnemyType:      "Common",
-		Condition:      "Healthy",
-		HitPoints:      10,
-		CurrentHP:      10,
-		CombatRating:   4,
-		CombatAccuracy: 40,
-		Initiative:     0,
-		InCover:        false,
-		Loot: structs.Item{
-			Name:        "Dollars",
-			ItemType:    "Currency",
-			Description: "It's money.",
-			Value:       30,
-		},
-	}
-
-	testRoom.Enemies = append(testRoom.Enemies, &enemyOne)
 	fmt.Println(testRoom)
 	// Map rooms to Graph
 	graph.AddVertex(&testRoom)
@@ -133,173 +153,207 @@ func main() {
 	fmt.Println(graph)
 	// Starting Room
 	party.CurrentRoom = InitializeStartingPoint(graph.AdjList)
-	path := []string{party.CurrentRoom}
 	// Assign Objectives
+
+	// CheckConditions
+	partyStatus := true    // The status of the party
+	missionStatus := false // The status of the mission
+	failure := false
+	NoOtherPath := false
 
 	// The Loop
 	for {
 		// Check Room
 		currentRoom := graph.AdjList[party.CurrentRoom]
 		currentRoom.Visited = true
-		fmt.Println(currentRoom)
+
+		// LOAD DATA
+		// If current room involves continuous enemies or the number of enemies is 0, load enemies into room
+		if currentRoom.Continuous == true || len(currentRoom.Enemies) == 0 {
+			currentRoom.LoadEnemies(Mission.MissionEnemies)
+		}
+
+		// LOAD DISCOVERIES
+		if len(currentRoom.Discoveries) == 0 {
+			currentRoom.LoadDiscoveries(Mission.MissionDiscoveries)
+		}
+
 		// Check for Enemies
 
 		if len(currentRoom.Enemies) > 0 {
+			// If party is under stealth
+
+			if party.IsStealth {
+				// Roll for detection?
+				// How can I do a precision bonus?
+				keepStealthRoll := rand.Intn(100) + 1
+				if keepStealthRoll > 40 {
+					// Keep Stealth, duh.
+				} else {
+					// Party is seen.
+					party.IsStealth = false
+				}
+			}
 			// Initiate Battle
-			party.Members = InitializeBattle(party.Members, currentRoom.Enemies)
-			party.Objectives[0].Fulfilled = CheckObjective(party.Objectives[0], currentRoom, "Eliminate")
-			party.Objectives[0].Fulfilled = CheckObjective(party.Objectives[0], currentRoom, "Item")
+			if party.IsStealth == false || (rand.Intn(2) == 1) {
+				party.Members = battle.InitializeBattle(party, currentRoom.Enemies, currentRoom)
+			}
+
+			// Assuming battle was made, if a player had a firearm, the party is revealed.
+			if party.IsStealth {
+				party.IsStealth = battle.Revealed(party.Members)
+			}
 		}
 
 		// Check if at least one member of the party is alive
 		// Otherwise, break loop
-
-		// Check for Discoveries
-		if len(currentRoom.Discoveries) > 0 {
-			// Roll for Discoveries
-			// Loop through each player and run a check on discovering something
+		partyStatus = CheckParty(party.Members)
+		if !partyStatus {
+			// If the Party is wiped, end the loop
+			break
 		}
-		// With the room cleared, check if this is the room the party needs to be in
-		party.Objectives[0].Fulfilled = CheckObjective(party.Objectives[0], currentRoom, "Location")
+		// Target Check -- for Rescue, Kidnap, Rescue, and Thieving
+		if !party.MissionStatus || !failure {
+			party, currentRoom = obj.TargetCheck(party, currentRoom)
 
-		// Check for Obstacles
+			// Check for Discoveries
+			if len(currentRoom.Discoveries) > 0 {
+				// Roll for Discoveries
+				// Loop through each player and run a check on discovering something
+				party.Members, currentRoom.Discoveries = dis.MakeDiscovery(party, currentRoom.Discoveries)
+			}
 
-		// Check Objectives
+			// Check Objectives
+			// With the room cleared, check if this is the room the party needs to be in
+			party, failure = obj.CheckObjectiveCompletion(party, currentRoom)
+		}
 		// Check on whether party needed to be in room
 		// Loop through player objectives
-		if CheckAllObjectives(party.Objectives) == true {
-			// If All Objectives are complete, break the infinite loop
+
+		// Check for Obstacles
+		if len(currentRoom.Obstacles) > 0 {
+			party, currentRoom = obj.CheckObstacles(party, currentRoom)
+		}
+
+		party.MissionStatus = obj.CheckAllObjectives(party.Objectives)
+		if party.MissionStatus || failure {
+			// Either all objectives are completed or one objective was a failure. Break the infinite loop
+			party.InRetreat = true
+		}
+
+		party.BreakLoop = obj.BreakLoop(party, failure)
+		if party.BreakLoop {
+			// Ends the Mission
 			break
 		}
 
-		// Check for adjacent rooms -- only when room is cleared? is movable?
-		if len(currentRoom.Edges) > 0 {
-			if len(currentRoom.Edges) == 1 {
-				// If there is only one adjacent room
-				// Add current room to path taken
-				path = append(path, party.CurrentRoom)
-				// Traverse into room
-				party.CurrentRoom = currentRoom.Edges[0]
-			} else if len(currentRoom.Edges) == 0 {
-				// Else if there are no adjacent rooms
-				// Traverse Backwards through Path
-				lastRoom := len(path) - 1
-				party.CurrentRoom = path[lastRoom]
-				// Remove last room from array
-				path = path[:lastRoom]
-			} else {
-				// Else if there is more than one adjacent room
-				// Choose a Room
-				unchosen := true
-				NoOtherPath := false
-				safetyIterator := 0
-				for unchosen == true {
-					safetyIterator++
-					randomPick := rand.Intn(len(currentRoom.Edges))
-					fmt.Println(randomPick)
-					chosenRoom := currentRoom.Edges[randomPick]
-					if graph.AdjList[chosenRoom].Visited == false {
-						unchosen = false
-						path = append(path, party.CurrentRoom)
-						party.CurrentRoom = chosenRoom
-					}
-					if safetyIterator > len(currentRoom.Edges)*2 {
-						// Safety precaution to prevent infinite loop. Just go back one
-						for i := 0; i < len(currentRoom.Edges); i++ {
-							iteratedRoom := currentRoom.Edges[i]
-							if graph.AdjList[iteratedRoom].Visited == false {
-								path = append(path, party.CurrentRoom)
-								party.CurrentRoom = chosenRoom
-								unchosen = false
+		// If in escape
+		if party.InRetreat == false {
+			party, NoOtherPath = TraverseBackwards(party, NoOtherPath)
+		} else if !currentRoom.Locked {
+			// Check for adjacent rooms -- only when room is cleared? is movable?
+			if len(currentRoom.Edges) > 0 {
+				if len(currentRoom.Edges) == 1 {
+					// If there is only one adjacent room
+					// Add current room to path taken
+					party.EscapeRoute = append(party.EscapeRoute, party.CurrentRoom)
+					// Traverse into room
+					party.CurrentRoom = currentRoom.Edges[0]
+				} else if len(currentRoom.Edges) == 0 {
+					// Else if there are no adjacent rooms
+					// Traverse Backwards through Path
+					lastRoom := len(party.EscapeRoute) - 1
+					party.CurrentRoom = party.EscapeRoute[lastRoom]
+					// Remove last room from array
+					party.EscapeRoute = party.EscapeRoute[:lastRoom]
+				} else {
+					// Else if there is more than one adjacent room
+					// Choose a Room
+					unchosen := true
+					safetyIterator := 0
+					for unchosen == true {
+						safetyIterator++
+						randomPick := rand.Intn(len(currentRoom.Edges))
+						fmt.Println(randomPick)
+						chosenRoom := currentRoom.Edges[randomPick]
+						if graph.AdjList[chosenRoom].Visited == false {
+							unchosen = false
+							party.EscapeRoute = append(party.EscapeRoute, party.CurrentRoom)
+							party.CurrentRoom = chosenRoom
+						}
+						if safetyIterator > len(currentRoom.Edges)*2 {
+							// Safety precaution to prevent infinite loop. Just go back one
+							for i := 0; i < len(currentRoom.Edges); i++ {
+								iteratedRoom := currentRoom.Edges[i]
+								if graph.AdjList[iteratedRoom].Visited == false {
+									party.EscapeRoute = append(party.EscapeRoute, party.CurrentRoom)
+									party.CurrentRoom = chosenRoom
+									unchosen = false
+									break
+								}
+							}
+							if unchosen == false {
+								break
+							} else {
+								// Traverse backwards
+								party, NoOtherPath = TraverseBackwards(party, NoOtherPath)
 								break
 							}
 						}
-						if unchosen == false {
-							break
-						} else {
-							// Traverse backwards
-							if len(path) < 1 {
-								fmt.Println("THERE IS NO OTHER PATH TO GO")
-								NoOtherPath = true
-								break
-							}
-							lastRoom := len(path) - 1
-							party.CurrentRoom = path[lastRoom]
-							// Remove last room from array
-							path = path[:lastRoom]
-							break
-						}
 					}
-				}
-				if NoOtherPath == true {
-					// Party fails
-					fmt.Println("For some reason the party ended up back on the starting square. Y'all lost.")
-					break
+					if NoOtherPath == true {
+						// Party fails
+						fmt.Println("For some reason the party ended up back on the starting square. Y'all lost.")
+						break
+					}
 				}
 			}
 		}
+
 	}
 
-	// So at this point all main objectives were either completed or the party is dead
-	// If victory achieved
-	// Congrats! Mission completed! You all did it!
-	// Log the victory
-	// Else
-	// Log defeat
-
+	if partyStatus == false || failure {
+		fmt.Println("The Party Has Wiped. You all have failed Lord Konderstahl.")
+	} else if missionStatus == true {
+		fmt.Println("Mission deemed a success. You all have pleased Lord Konderstahl greatly.")
+	}
 	// Log status of each player
 	// Update all player objects into Firebase
+	for _, player := range party.Members {
+		playerRef := client.Collection("Players").Doc("Cayetano") // Replace with Discord ID
+		// playerJSON, err := json.Marshal(party.Members[0])
+		// if err != nil {
+		// 	fmt.Println(err)
+		// }
+		playerRef.Set(ctx, player)
+	}
 
 }
 
-// CheckAllObjectives - Confirm that all objectives are complete
-func CheckAllObjectives(Objectives []*structs.Objective) bool {
-	totalObj := len(Objectives)
-	completedObj := 0
-	for i := 0; i < totalObj; i++ {
-		if Objectives[i].Fulfilled == true {
-			completedObj++
-		}
+// TraverseBackwards -- The Party retreats back
+func TraverseBackwards(party structs.Party, NoOtherPath bool) (structs.Party, bool) {
+	// Traverse backwards
+	if len(party.EscapeRoute) < 1 {
+		fmt.Println("THERE IS NO OTHER PATH TO GO")
+		NoOtherPath = true
+		return party, NoOtherPath
 	}
-	if completedObj == totalObj {
-		return true
+	lastRoom := len(party.EscapeRoute) - 1
+	party.CurrentRoom = party.EscapeRoute[lastRoom]
+	// Remove last room from array
+	party.EscapeRoute = party.EscapeRoute[:lastRoom]
+
+	return party, NoOtherPath
+}
+
+// CheckParty - Check if the party is still alive
+func CheckParty(party []*structs.Player) bool {
+	for _, i := range party {
+		if i.Condition != "Dead" {
+			return true
+		}
 	}
 	return false
-}
-
-// CheckObjective - Check if an objective is complete
-func CheckObjective(obj *structs.Objective, room *structs.Room, objectiveType string) bool {
-	// Current Logic implemented for One Objective Only, but structured for multiple just in case
-	result := false
-	// If the ObjectiveType matches that of the section this function is placed, do the check, if not, ignore
-	if obj.ObjectiveType == objectiveType {
-		if obj.ObjectiveType == "Eliminate" {
-			// Eliminate an Enemy Unit
-			// Loop through dead enemy units
-			enemies := room.Enemies
-			for i := 0; i < len(enemies); i++ {
-				// If the enemy in the objective was in the room & dead
-				if obj.Target == enemies[i].Name && enemies[i].Condition == "Dead" {
-					result = true
-					break
-				}
-			}
-		} else if obj.ObjectiveType == "Location" {
-			if obj.Target == room.Name {
-				result = true
-			}
-		} else if obj.ObjectiveType == "Item" {
-			enemies := room.Enemies
-			for i := 0; i < len(enemies); i++ {
-				// If the enemy in the objective was in the room & dead
-				if obj.Target == enemies[i].Loot.Name && enemies[i].Condition == "Dead" {
-					result = true
-					break
-				}
-			}
-		}
-	}
-	return result
 }
 
 // InitializeStartingPoint - find the starting room.
@@ -310,209 +364,4 @@ func InitializeStartingPoint(rooms map[string]*structs.Room) string {
 		}
 	}
 	return "NONE"
-}
-
-// InitializeBattle - Initialize Battle between Players and Enemies in a room
-func InitializeBattle(players []*structs.Player, enemies []*structs.Enemy) []*structs.Player {
-	//Take in slice of players & slice of enemies
-	// Use Battle Queue Struct instead of map
-	// create a slice to take in a struct with a name, type, and initiative. Generate initiative based on player's perception
-	battleQueue := []structs.BattleQueue{}
-	for i := 0; i < len(players); i++ {
-		playerQueue := structs.BattleQueue{
-			Name:          players[i].Name,
-			CombatantType: "Player",
-			EnemyType:     "",
-			Initiative:    rand.Intn(players[i].Attributes.Perception) + 1,
-		}
-		battleQueue = append(battleQueue, playerQueue)
-	}
-
-	for i := 0; i < len(enemies); i++ {
-		enemyQueue := structs.BattleQueue{
-			Name:          enemies[i].Name,
-			CombatantType: "Enemy",
-			EnemyType:     enemies[i].EnemyType,
-			Initiative:    enemies[i].Initiative,
-		}
-		battleQueue = append(battleQueue, enemyQueue)
-	}
-	// Sort the slice from highest initiative to lowest
-	// FOR LATER -- do a feat check for players w/ sleight of hand
-	battleSlice := battleQueue[:]
-	sort.Slice(battleSlice, func(i, j int) bool {
-		return battleSlice[i].Initiative > battleSlice[j].Initiative
-	})
-
-	playerCount := len(players)
-	enemyCount := len(enemies)
-
-	// while all players are not dead || all enemies are not dead
-	for playerCount > 0 && enemyCount > 0 {
-		// pop from the beginning of the queue
-		battleNode, battleSlice := battleSlice[0], battleSlice[1:]
-
-		// Check whether the map received is a player or enemy
-		// If player, randomly select an enemy from the enemies array. If enemy, randomly select a player from the players array
-
-		if battleNode.CombatantType == "Player" {
-			player := FindPlayer(players, battleNode)
-			chosenEnemy := rand.Intn(len(enemies))
-			SingularBattle(player, enemies[chosenEnemy], true)
-			if enemies[chosenEnemy].Condition == "Dead" {
-				enemyCount--
-			}
-		} else if battleNode.CombatantType == "Enemy" {
-			enemy := FindEnemy(enemies, battleNode)
-			chosenPlayer := rand.Intn(len(players))
-			SingularBattle(players[chosenPlayer], enemy, false)
-			if players[chosenPlayer].Condition == "Dead" {
-				playerCount--
-			}
-		}
-
-		battleSlice = append(battleSlice, battleNode)
-		// Loop should break when either all enemies are defeated / mortally wounded, or all players are unable to fight
-	}
-	return players
-}
-
-// FindEnemy - find Enemy from the battle queue
-func FindEnemy(enemies []*structs.Enemy, battleNode structs.BattleQueue) *structs.Enemy {
-	// Find the enemy for singular battle
-	i := 0
-	for i < len(enemies) {
-		if battleNode.Name == enemies[i].Name {
-			break
-		}
-		i++
-	}
-	return enemies[i]
-}
-
-// FindPlayer - Find a player from the battle queue
-func FindPlayer(players []*structs.Player, battleNode structs.BattleQueue) *structs.Player {
-	// Find the player for Singular Battle
-	i := 0
-	for i < len(players) {
-		if battleNode.Name == players[i].Name {
-			break
-		}
-		i++
-	}
-	return players[i]
-}
-
-// SingularBattle : A turn of Battle between a player and an enemy.
-func SingularBattle(player *structs.Player, enemy *structs.Enemy, playerTurn bool) (*structs.Player, *structs.Enemy) {
-	// Establish Base Values & Variables
-	coreStrength := 0
-	if player.Weapon.WeaponType == "Rifle" ||
-		player.Weapon.WeaponType == "Pistol" ||
-		player.Weapon.WeaponType == "Shotgun" ||
-		player.Weapon.WeaponType == "SniperRifle" {
-		coreStrength = player.Attributes.Dexterity
-	} else {
-		coreStrength = player.Attributes.Strength
-	}
-
-	playerBaseStrength := coreStrength + player.Weapon.WeaponRating
-	enemyBaseStrength := enemy.CombatRating
-	currentPlayerStrength := 0
-	currentEnemyStrength := 0
-	playerBonus := 0 // Used to detect if player is in cover
-	enemyBonus := 0  // Used to detect if enemy is in cover
-
-	difference := 0
-
-	// If it's the player's turn:
-	if playerTurn == true {
-		// If the player has ammo in his gun
-		currentWeaponCartridge := player.Weapon.CurrentCartridge
-
-		if enemy.InCover == true {
-			enemyBonus = 20
-		}
-
-		if currentWeaponCartridge > 0 {
-
-			// Fires Shot -- if the shot is less than the Player's Accuracy rating
-			shot := rand.Intn(100)
-
-			player.Weapon.CurrentCartridge--
-
-			if shot <= player.Weapon.WeaponAccuracy-enemyBonus {
-				// Shot hits target
-				currentPlayerStrength = rand.Intn(playerBaseStrength) + 1
-			} else {
-				fmt.Println("PLAYER MISSED!")
-			}
-		} else {
-			player.Weapon.CurrentReload++
-			if player.Weapon.CurrentReload == player.Weapon.WeaponReloadTime {
-				currentWeaponCartridge = player.Weapon.WeaponCartridge
-				player.Weapon.CurrentReload = 0
-			}
-
-			fmt.Println("Reloading...")
-		}
-	} else {
-		// Enemy's turn to fire
-		if player.InCover == true {
-			playerBonus = 33
-		}
-
-		enemyShot := rand.Intn(100)
-		if enemyShot <= enemy.CombatAccuracy-playerBonus {
-			currentEnemyStrength = rand.Intn(enemyBaseStrength)
-		} else {
-			fmt.Println("ENEMY MISSED!")
-		}
-		playerTurn = true
-	}
-	fmt.Println("Player Strength:", currentPlayerStrength)
-	fmt.Println("Enemy Strength:", currentEnemyStrength)
-	// If the player's strength is greater than 0
-	if currentPlayerStrength > currentEnemyStrength {
-		difference = currentPlayerStrength - currentEnemyStrength
-		fmt.Println("Player was stronger. Difference:", difference)
-		enemy.CurrentHP, enemy.Condition = DamageCalculation(difference, enemy.CurrentHP, enemy.HitPoints)
-
-	} else if currentPlayerStrength < currentEnemyStrength {
-		difference = currentEnemyStrength - currentPlayerStrength
-		fmt.Println("Enemy was stronger. Difference:", difference)
-		player.CurrentHealth, player.Condition = DamageCalculation(difference, player.CurrentHealth, player.HealthRating)
-
-	} else {
-		// It is a draw
-		fmt.Println("Ended up in a draw")
-	}
-	return player, enemy
-}
-
-// DamageCalculation - calculate damage dealt between two adversaries
-func DamageCalculation(Damage int, currentHitpoints int, Hitpoints int) (int, string) {
-	if Damage > currentHitpoints {
-		return 0, "Dead"
-	}
-	currHP := currentHitpoints - Damage
-	condition := ""
-	if float64(currHP) > math.Floor(float64(Hitpoints)*0.8) && currHP < Hitpoints {
-		condition = "Barely Scratched"
-		currHP = Hitpoints
-	} else if float64(currHP) > math.Floor(float64(Hitpoints)*0.6) {
-		condition = "Minorly Injured"
-		currHP = int(float64(Hitpoints) * 0.8)
-	} else if float64(currHP) > math.Floor(float64(Hitpoints)*0.4) {
-		condition = "Major Injury"
-		currHP = int(float64(Hitpoints) * 0.6)
-	} else if float64(currHP) > math.Floor(float64(Hitpoints)*0.2) {
-		condition = "Severely Injured"
-		currHP = int(float64(Hitpoints) * 0.4)
-	} else {
-		condition = "Mortally Wounded"
-		currHP = int(float64(Hitpoints) * 0.2)
-	}
-
-	return currHP, condition
 }
