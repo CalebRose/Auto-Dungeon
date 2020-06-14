@@ -20,6 +20,7 @@ func MakeDiscovery(party structs.Party, discoveries []*structs.Discovery) ([]*st
 			if discoveryRoll+player.Attributes.Perception > discovery.DiscoveryRating {
 				// Discovery Made
 				discovery.Discovered = true
+				player.StatAllocation("DiscoveryMade", 0)
 			}
 		}
 		if discovery.Discovered == true {

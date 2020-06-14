@@ -89,7 +89,7 @@ func main() {
 
 		var player structs.Player
 		doc.DataTo(&player)
-
+		player.StatAllocation("Mission", 0)
 		party.Members = append(party.Members, &player)
 	}
 	// Set Party Behaviors
@@ -98,13 +98,6 @@ func main() {
 	// Load Global Data
 	Mission.LoadEnemies()
 	Mission.LoadDiscoveries()
-
-	// globalEnemies := []structs.Enemy{}
-	// globalEnemies = dungeondata.LoadEnemies()
-
-	// Global Discoveries List
-	// globalDiscoveries := []*structs.Discovery{}
-	// globalDiscoveries = dungeondata.LoadDiscoveries()
 
 	// Rooms
 	graph := structs.Graph{
@@ -186,16 +179,17 @@ func main() {
 			if party.IsStealth {
 				// Roll for detection?
 				// How can I do a precision bonus?
-				keepStealthRoll := rand.Intn(100) + 1
-				if keepStealthRoll > 40 {
+				DetectionRoll := rand.Intn(100) + 1
+				partyStealth := party.PartyBehavior.PartyStealth
+				if DetectionRoll+partyStealth > 40 {
 					// Keep Stealth, duh.
 				} else {
 					// Party is seen.
-					party.IsStealth = false
+					party.KeepStealth(currentRoom.Enemies)
 				}
 			}
 			// Initiate Battle
-			if party.IsStealth == false || (rand.Intn(2) == 1) {
+			if !party.IsStealth || rand.Intn(20) > 4 {
 				party.Members = battle.InitializeBattle(party, currentRoom.Enemies, currentRoom)
 			}
 
@@ -238,6 +232,10 @@ func main() {
 		party.MissionStatus = obj.CheckAllObjectives(party.Objectives)
 		if party.MissionStatus || failure {
 			// Either all objectives are completed or one objective was a failure. Break the infinite loop
+			for _, player := range party.Members {
+				player.StatAllocation("ObjectivesCompleted", len(party.Objectives))
+			}
+
 			party.InRetreat = true
 		}
 

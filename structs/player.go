@@ -25,3 +25,54 @@ type Player struct {
 	HasFought          bool
 	Feats              []Feat
 }
+
+// StatAllocation -- Allocate, num int a stat to the player based on objectives
+func (pl *Player) StatAllocation(stat string, num int) {
+	if stat == "Rescue" {
+		pl.Stats.PersonsRescued++
+	} else if stat == "Kidnapping" {
+		pl.Stats.PersonsKidnapped++
+	} else if stat == "Theft" {
+		pl.Stats.ItemsStolen++
+	} else if stat == "Eliminate" {
+		pl.Stats.AssassinationsMade++
+	} else if stat == "BattleEngaged" {
+		pl.Stats.BattlesEngaged++
+	} else if stat == "EnemyKilled" {
+		pl.Stats.EnemiesKilled++
+	} else if stat == "Rifle" {
+		pl.Stats.RifleUse++
+	} else if stat == "Pistol" {
+		pl.Stats.PistolUse++
+	} else if stat == "Rifle" {
+		pl.Stats.ShotgunUse++
+	} else if stat == "Rifle" {
+		pl.Stats.SniperRifleUse++
+	} else if stat == "Melee" {
+		pl.Stats.MeleeWeaponUse++
+	} else if stat == "Fists" {
+		pl.Stats.FistsUse++
+	} else if stat == "ShotMade" {
+		pl.Stats.ShotsMade++
+	} else if stat == "ShotFired" {
+		pl.Stats.ShotsFired++
+	} else if stat == "Minorly Injured" {
+		pl.Stats.MinorInjuries++
+	} else if stat == "Majorly Injured" {
+		pl.Stats.MajorInjuries++
+	} else if stat == "Severely Injured" {
+		pl.Stats.SevereInjuries++
+	} else if stat == "DiscoveryMade" {
+		pl.Stats.DiscoveriesFound++
+	} else if stat == "BossDefeated" {
+		pl.Stats.BossesDefeated++
+	} else if stat == "DamageTaken" {
+		pl.Stats.DamageTaken += num
+	} else if stat == "DamageDone" {
+		pl.Stats.DamageDone += num
+	} else if stat == "ObjectivesCompleted" {
+		pl.Stats.ObjectivesCompleted += num
+	} else if stat == "Mission" {
+		pl.Stats.Missions++
+	}
+}

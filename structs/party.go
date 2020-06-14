@@ -1,5 +1,7 @@
 package structs
 
+import "math/rand"
+
 // Party - structure for party of all player characters
 type Party struct {
 	Name          string
@@ -22,11 +24,13 @@ func (p *Party) SetBehaviors(players []*Player) {
 	initCuriosity := 0
 	initDiscovery := 0
 	initPersuasion := 0
+	initStealth := 0
 	if 20%playerCount == 0 {
 		// 2, 4, 5, 10, 20 -- set base to 10
 		initCuriosity = 10
 		initDiscovery = 10
 		initPersuasion = 10
+		initStealth = 10
 	}
 	for _, player := range players {
 		behavior := player.Behavior
@@ -69,8 +73,56 @@ func (p *Party) SetBehaviors(players []*Player) {
 				initPersuasion -= 2
 			}
 		}
+		if player.Proficiencies.Stealth > 5 {
+			if initStealth+2 > 20 {
+				initStealth = 20
+			} else {
+				initStealth += 2
+			}
+		} else if player.Proficiencies.Stealth > 1 {
+			initStealth += 0
+		} else {
+			initStealth -= 2
+		}
 	}
 	p.PartyBehavior.PartyCuriosity = initCuriosity
 	p.PartyBehavior.PartyDiscovery = initDiscovery
 	p.PartyBehavior.PartyPersuasion = initPersuasion
+	p.PartyBehavior.PartyStealth = initStealth
+}
+
+// KeepStealth - The Party is seen by enemies, run a check if the party can persuade the group on their presence
+func (p *Party) KeepStealth(enemies []*Enemy) {
+	count := 0 // Count for how many enemies believe the group
+	roll20 := false
+	for _, player := range p.Members {
+		persuasionRoll := rand.Intn(20) + 1
+		persuasion := player.Proficiencies.Persuasion
+		bonus := 0
+		if persuasion > 15 {
+			bonus = 4
+		} else if persuasion > 12 {
+			bonus = 3
+		} else if persuasion > 9 {
+			bonus = 2
+		} else if persuasion > 6 {
+			bonus++
+		} else if persuasion < 3 {
+			bonus--
+		} else if persuasion <= 1 {
+			bonus -= 2
+		}
+		if persuasionRoll == 1 {
+			roll20 = true
+			break
+		} else if persuasionRoll+bonus > 14 {
+			count++
+			player.Stats.PersuasionChecks++
+		}
+	}
+	if roll20 || float64(count) >= (float64(len(enemies))*0.66) {
+		p.IsStealth = true
+	} else {
+		p.IsStealth = false
+	}
 }

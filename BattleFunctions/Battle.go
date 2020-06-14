@@ -30,6 +30,7 @@ func InitializeBattle(party structs.Party, enemies []*structs.Enemy, room *struc
 			EnemyType:     "",
 			Initiative:    rand.Intn(players[i].Attributes.Perception) + 1 + stealthBonus,
 		}
+		players[i].StatAllocation("BattleEngaged", 0)
 		battleQueue = append(battleQueue, playerQueue)
 
 	}
@@ -80,9 +81,13 @@ func InitializeBattle(party structs.Party, enemies []*structs.Enemy, room *struc
 			player, filteredEnemies[chosenEnemy] = SingularBattle(player, filteredEnemies[chosenEnemy], true)
 			if enemies[chosenEnemy].Condition == "Dead" {
 				enemyCount--
+				if enemies[chosenEnemy].EnemyType == "Boss" {
+					player.StatAllocation("BossDefeated", 0)
+				}
 				if enemyCount > 0 {
 					filteredEnemies = FilterEnemies(filteredEnemies)
 				}
+				player.StatAllocation("EnemyKilled", 0)
 			}
 		} else if battleNode.CombatantType == "Enemy" {
 			enemy := FindEnemy(enemies, battleNode)
@@ -186,10 +191,11 @@ func SingularBattle(player *structs.Player, enemy *structs.Enemy, playerTurn boo
 		player.Weapon.WeaponType == "Shotgun" ||
 		player.Weapon.WeaponType == "SniperRifle" {
 		coreStrength = player.Attributes.Dexterity
+
 	} else {
 		coreStrength = player.Attributes.Strength
 	}
-
+	player.StatAllocation(player.Weapon.WeaponType, 0)
 	playerBaseStrength := coreStrength + player.Weapon.WeaponRating
 	enemyBaseStrength := enemy.CombatRating
 	currentPlayerStrength := 0
@@ -209,14 +215,20 @@ func SingularBattle(player *structs.Player, enemy *structs.Enemy, playerTurn boo
 		}
 
 		if currentWeaponCartridge > 0 {
-
+			accuracy := player.Weapon.WeaponAccuracy
+			fireRate := player.Weapon.FireRate
+			if player.Behavior.BattleAggression {
+				fireRate = int(math.Ceil(float64(fireRate) * 1.5))
+				accuracy -= 15
+			}
 			// Fires Shot -- if the shot is less than the Player's Accuracy rating
-			for i := 0; i < player.Weapon.FireRate && currentWeaponCartridge > 0; i++ {
+			for i := 0; i < fireRate && currentWeaponCartridge > 0; i++ {
 				shot := rand.Intn(100)
 				player.Weapon.CurrentCartridge--
-
-				if shot <= player.Weapon.WeaponAccuracy-enemyBonus {
+				player.StatAllocation("ShotFired", 0)
+				if shot <= accuracy-enemyBonus {
 					// Shot hits target
+					player.StatAllocation("ShotMade", 0)
 					currentPlayerStrength = currentPlayerStrength + rand.Intn(playerBaseStrength) + 1
 				} else {
 					fmt.Println("PLAYER MISSED!")
@@ -251,6 +263,7 @@ func SingularBattle(player *structs.Player, enemy *structs.Enemy, playerTurn boo
 	// If the player's strength is greater than 0
 	if currentPlayerStrength > currentEnemyStrength {
 		difference = currentPlayerStrength - currentEnemyStrength
+		player.StatAllocation("DamageDone", difference)
 		fmt.Println("Player was stronger. Difference:", difference)
 		enemy.CurrentHP, enemy.Condition = DamageCalculation(difference, enemy.CurrentHP, enemy.HitPoints)
 
@@ -258,7 +271,8 @@ func SingularBattle(player *structs.Player, enemy *structs.Enemy, playerTurn boo
 		difference = currentEnemyStrength - currentPlayerStrength
 		fmt.Println("Enemy was stronger. Difference:", difference)
 		player.CurrentHealth, player.Condition = DamageCalculation(difference, player.CurrentHealth, player.HealthRating)
-
+		player.StatAllocation("DamageTaken", difference)
+		player.StatAllocation(player.Condition, 0)
 	} else {
 		// It is a draw
 		fmt.Println("Ended up in a draw")

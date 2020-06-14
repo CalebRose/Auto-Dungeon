@@ -25,17 +25,20 @@ func CheckObstacles(party structs.Party, room *structs.Room) (structs.Party, *st
 		for _, player := range party.Members {
 			if obstacle.ObstacleType == "Door" {
 				// Locked door -- lockpick it
-				bonus = BonusAllocation(player.Proficiencies.Lockpicking)
+				bonus = BonusAllocation(player.Proficiencies.Stealth)
 			} else if obstacle.ObstacleType == "Rubble" || obstacle.ObstacleType == "GiantMachine" || obstacle.ObstacleType == "Boulder" {
 				// Physique check
-				bonus = BonusAllocation(player.Proficiencies.Physique)
+				bonus = BonusAllocation(player.Proficiencies.Fisticuffs)
 			} else if obstacle.ObstacleType == "Inactive Machine" {
-				bonus = BonusAllocation(player.Proficiencies.Explosives)
+				bonus = BonusAllocation(player.Proficiencies.Engineering)
 			}
 
 			if roll+bonus > obstacle.ObstacleRequirement || roll == 20 {
 				// Obstacle passed
 				obstacle.ObstaclePassed = true
+				obstaclesPassed++
+				player.Stats.ObstaclesOvercome++
+				break
 			}
 		}
 		if obstaclesPassed == len(room.Obstacles) {

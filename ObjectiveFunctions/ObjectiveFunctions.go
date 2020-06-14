@@ -50,6 +50,9 @@ func CheckObjectiveCompletion(party structs.Party, room *structs.Room) (structs.
 		for i := 0; i < len(enemies); i++ {
 			// If the enemy in the objective was in the room & dead
 			if obj.TargetPerson == enemies[i].Name && enemies[i].Condition == "Dead" {
+				for _, player := range party.Members {
+					player.StatAllocation(obj.ObjectiveType, 0)
+				}
 				obj.Fulfilled = true
 				break
 			}
@@ -181,16 +184,16 @@ func TargetCheck(party structs.Party, room *structs.Room) (structs.Party, *struc
 				if attempts < 3 || enemiesAlive {
 					bonus = BonusAllocation(player.Proficiencies.Persuasion)
 				} else if player.Profession == "Conscript" {
-					bonus = BonusAllocation(player.Proficiencies.Rifle)
+					bonus = BonusAllocation(player.Proficiencies.LongRangeWeapons)
 				} else {
-					bonus = BonusAllocation(player.Proficiencies.Physique)
+					bonus = BonusAllocation(player.Proficiencies.Fisticuffs)
 				}
 
 				if roll+bonus > target.ObjRequirement || roll == 20 {
 					if enemiesAlive {
-						fmt.Println("The party kidnapped " + target.TargetName + " right from under their enemies' noses!")
+						fmt.Println("Player " + player.Name + " has kidnapped " + target.TargetName + " right from under their enemies' noses!")
 					} else {
-						fmt.Println("The party has kidnapped their target! Time to retreat!")
+						fmt.Println("Player " + player.Name + " has kidnapped their target! Time to retreat!")
 					}
 					party.Targets = append(party.Targets, &target)
 					target.Acquired = true
@@ -220,6 +223,10 @@ func TargetCheck(party structs.Party, room *structs.Room) (structs.Party, *struc
 		}
 		if !target.Acquired && target.ObjRequired {
 			room.Locked = true
+		} else if target.Acquired && target.ObjRequired {
+			for _, player := range party.Members {
+				player.StatAllocation(obj.ObjectiveType, 0)
+			}
 		}
 	}
 	return party, room
