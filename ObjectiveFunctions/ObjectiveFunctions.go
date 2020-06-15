@@ -51,6 +51,9 @@ func CheckObjectiveCompletion(party structs.Party, room *structs.Room) (structs.
 			// If the enemy in the objective was in the room & dead
 			if obj.TargetPerson == enemies[i].Name && enemies[i].Condition == "Dead" {
 				for _, player := range party.Members {
+					if player.Condition == "Dead" {
+						continue
+					}
 					player.StatAllocation(obj.ObjectiveType, 0)
 				}
 				obj.Fulfilled = true
@@ -152,6 +155,9 @@ func TargetCheck(party structs.Party, room *structs.Room) (structs.Party, *struc
 		//
 
 		for _, player := range party.Members {
+			if player.Condition == "Dead" {
+				continue
+			}
 			roll := rand.Intn(20) + 1
 			if obj.ObjectiveType == "Theft" {
 
@@ -225,6 +231,9 @@ func TargetCheck(party structs.Party, room *structs.Room) (structs.Party, *struc
 			room.Locked = true
 		} else if target.Acquired && target.ObjRequired {
 			for _, player := range party.Members {
+				if player.Condition == "Dead" {
+					continue
+				}
 				player.StatAllocation(obj.ObjectiveType, 0)
 			}
 		}

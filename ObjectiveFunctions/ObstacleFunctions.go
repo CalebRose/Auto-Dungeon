@@ -23,6 +23,9 @@ func CheckObstacles(party structs.Party, room *structs.Room) (structs.Party, *st
 		}
 		// Loop through party
 		for _, player := range party.Members {
+			if player.Condition == "Dead" {
+				continue
+			}
 			if obstacle.ObstacleType == "Door" {
 				// Locked door -- lockpick it
 				bonus = BonusAllocation(player.Proficiencies.Stealth)

@@ -14,6 +14,10 @@ func MakeDiscovery(party structs.Party, discoveries []*structs.Discovery) ([]*st
 		}
 		pickPlayer := rand.Intn(len(party.Members))
 		player := party.Members[pickPlayer]
+		for player.Condition == "Dead" {
+			pickPlayer = rand.Intn(len(party.Members))
+			player = party.Members[pickPlayer]
+		}
 		if discovery.Discovered == false {
 
 			discoveryRoll := rand.Intn(20)

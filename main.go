@@ -233,6 +233,9 @@ func main() {
 		if party.MissionStatus || failure {
 			// Either all objectives are completed or one objective was a failure. Break the infinite loop
 			for _, player := range party.Members {
+				if player.Condition == "Dead" {
+					continue
+				}
 				player.StatAllocation("ObjectivesCompleted", len(party.Objectives))
 			}
 

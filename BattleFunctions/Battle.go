@@ -67,7 +67,9 @@ func InitializeBattle(party structs.Party, enemies []*structs.Enemy, room *struc
 		// If player, randomly select an enemy from the enemies array. If enemy, randomly select a player from the players array
 
 		if battleNode.CombatantType == "Player" {
+			// Player Turn
 			player := FindPlayer(filteredPlayers, battleNode)
+			useMedicalItem := false
 			if player == nil || player.Condition == "Dead" {
 				battleIterator = Iterate(battleIterator, battleSlice)
 				continue
@@ -77,19 +79,32 @@ func InitializeBattle(party structs.Party, enemies []*structs.Enemy, room *struc
 				player.InCover = true
 				playerCoverCount++
 			}
-			chosenEnemy := rand.Intn(enemyCount)
-			player, filteredEnemies[chosenEnemy] = SingularBattle(player, filteredEnemies[chosenEnemy], true)
-			if enemies[chosenEnemy].Condition == "Dead" {
-				enemyCount--
-				if enemies[chosenEnemy].EnemyType == "Boss" {
-					player.StatAllocation("BossDefeated", 0)
+
+			if player.Behavior.MedicalUse {
+				medRoll := rand.Intn(3)
+				if medRoll > 1 {
+					useMedicalItem = true
 				}
-				if enemyCount > 0 {
-					filteredEnemies = FilterEnemies(filteredEnemies)
+			}
+			if useMedicalItem {
+				player.UseMedicalItem()
+			} else {
+
+				chosenEnemy := rand.Intn(enemyCount)
+				player, filteredEnemies[chosenEnemy] = SingularBattle(player, filteredEnemies[chosenEnemy], true)
+				if enemies[chosenEnemy].Condition == "Dead" {
+					enemyCount--
+					if enemies[chosenEnemy].EnemyType == "Boss" {
+						player.StatAllocation("BossDefeated", 0)
+					}
+					if enemyCount > 0 {
+						filteredEnemies = FilterEnemies(filteredEnemies)
+					}
+					player.StatAllocation("EnemyKilled", 0)
 				}
-				player.StatAllocation("EnemyKilled", 0)
 			}
 		} else if battleNode.CombatantType == "Enemy" {
+			// Enemy Turn
 			enemy := FindEnemy(enemies, battleNode)
 			if enemy == nil || enemy.Condition == "Dead" {
 				battleIterator = Iterate(battleIterator, battleSlice)
@@ -142,12 +157,26 @@ func FilterEnemies(enemies []*structs.Enemy) []*structs.Enemy {
 // FilterPlayers - array for filtering players based on the Dead condition. Can be altered later to cover more scenarios
 func FilterPlayers(players []*structs.Player) []*structs.Player {
 	temp := []*structs.Player{}
-	for _, i := range players {
-		if i.Condition != "Dead" {
-			temp = append(temp, i)
+	injuredPlayers := []*structs.Player{}
+	for _, player := range players {
+		if player.Condition != "Dead" {
+			if (player.Condition == "Minorly Injured" && player.Behavior.EngagementThreshold <= 4) ||
+				(player.Condition == "Majorly Injured" && player.Behavior.EngagementThreshold <= 3) ||
+				(player.Condition == "Severely Injured" && player.Behavior.EngagementThreshold <= 2) ||
+				(player.Behavior.EngagementThreshold == 1) {
+				injuredPlayers = append(injuredPlayers, player)
+			} else {
+				temp = append(temp, player)
+			}
+		}
+	}
+	if len(temp) <= (len(injuredPlayers) / 2) {
+		for i := 0; i < len(injuredPlayers)/2; i++ {
+			temp = append(temp, injuredPlayers[i])
 		}
 	}
 	return temp
+
 }
 
 // FindEnemy - find Enemy from the battle queue

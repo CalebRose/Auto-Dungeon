@@ -76,3 +76,17 @@ func (pl *Player) StatAllocation(stat string, num int) {
 		pl.Stats.Missions++
 	}
 }
+
+// UseMedicalItem - Player Uses an item to heal themselves as opposed to attacking an enemy
+func (pl *Player) UseMedicalItem() {
+	length := len(pl.Inventory)
+	for i := 0; i < length; i++ {
+		item := pl.Inventory[i]
+		if item.ItemType != "Medical" {
+			continue
+		}
+		pl.CurrentHealth += item.ItemValue
+		pl.Inventory[length-1], pl.Inventory[i] = pl.Inventory[i], pl.Inventory[length-1]
+		pl.Inventory = pl.Inventory[:length-1]
+	}
+}
