@@ -73,13 +73,13 @@ func (p *Party) SetBehaviors(players []*Player) {
 				initPersuasion -= 2
 			}
 		}
-		if player.Proficiencies.Stealth > 5 {
+		if player.Proficiencies.Stealth.Level > 5 {
 			if initStealth+2 > 20 {
 				initStealth = 20
 			} else {
 				initStealth += 2
 			}
-		} else if player.Proficiencies.Stealth > 1 {
+		} else if player.Proficiencies.Stealth.Level > 1 {
 			initStealth += 0
 		} else {
 			initStealth -= 2
@@ -99,17 +99,17 @@ func (p *Party) KeepStealth(enemies []*Enemy) {
 		persuasionRoll := rand.Intn(20) + 1
 		persuasion := player.Proficiencies.Persuasion
 		bonus := 0
-		if persuasion > 15 {
+		if persuasion.Level > 15 {
 			bonus = 4
-		} else if persuasion > 12 {
+		} else if persuasion.Level > 12 {
 			bonus = 3
-		} else if persuasion > 9 {
+		} else if persuasion.Level > 9 {
 			bonus = 2
-		} else if persuasion > 6 {
+		} else if persuasion.Level > 6 {
 			bonus++
-		} else if persuasion < 3 {
+		} else if persuasion.Level < 3 {
 			bonus--
-		} else if persuasion <= 1 {
+		} else if persuasion.Level <= 1 {
 			bonus -= 2
 		}
 		if persuasionRoll == 1 {

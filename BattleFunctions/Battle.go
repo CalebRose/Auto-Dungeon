@@ -345,7 +345,7 @@ func Revealed(players []*structs.Player) bool {
 					// Roll
 					roll := rand.Intn(100) + 1
 					// Modify roll with player's attributes
-					if roll > (30 + player.Proficiencies.Stealth) {
+					if roll > (30 + player.Proficiencies.Stealth.Level) {
 						// Reveal
 						return false
 					}

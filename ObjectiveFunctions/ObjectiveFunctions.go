@@ -166,7 +166,7 @@ func TargetCheck(party structs.Party, room *structs.Room) (structs.Party, *struc
 					break
 				}
 				if enemiesAlive {
-					bonus = BonusAllocation(player.Proficiencies.Pickpocket)
+					bonus = BonusAllocation(player.Proficiencies.Pickpocket.Level)
 				} else {
 					target.ObjRequirement = 1
 				}
@@ -188,11 +188,11 @@ func TargetCheck(party structs.Party, room *structs.Room) (structs.Party, *struc
 				}
 
 				if attempts < 3 || enemiesAlive {
-					bonus = BonusAllocation(player.Proficiencies.Persuasion)
+					bonus = BonusAllocation(player.Proficiencies.Persuasion.Level)
 				} else if player.Profession == "Conscript" {
-					bonus = BonusAllocation(player.Proficiencies.LongRangeWeapons)
+					bonus = BonusAllocation(player.Proficiencies.LongRangeWeapons.Level)
 				} else {
-					bonus = BonusAllocation(player.Proficiencies.Fisticuffs)
+					bonus = BonusAllocation(player.Proficiencies.Fisticuffs.Level)
 				}
 
 				if roll+bonus > target.ObjRequirement || roll == 20 {
@@ -210,7 +210,7 @@ func TargetCheck(party structs.Party, room *structs.Room) (structs.Party, *struc
 
 			} else if obj.ObjectiveType == "Rescue" {
 
-				bonus = BonusAllocation(player.Proficiencies.Persuasion)
+				bonus = BonusAllocation(player.Proficiencies.Persuasion.Level)
 				if roll+bonus > target.ObjRequirement || roll == 20 {
 					if enemiesAlive {
 						fmt.Println("The party managed to rescue " + target.TargetName + " right from under their enemies' noses!")

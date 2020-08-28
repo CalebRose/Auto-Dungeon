@@ -7,6 +7,7 @@ type Weapon struct {
 	AttackType        string
 	WeaponValue       int
 	WeaponDescription string
+	WeaponOrigin      string
 	Requirement       int
 	WeaponRating      int
 	WeaponRange       int

@@ -2,6 +2,7 @@ package structs
 
 // Player - structure for player character
 type Player struct {
+	Username           string
 	Name               string
 	Profession         string
 	Armor              Armor
@@ -23,7 +24,7 @@ type Player struct {
 	InCover            bool
 	Ready              bool
 	HasFought          bool
-	Feats              []Feat
+	// Feats              []Feat
 }
 
 // StatAllocation -- Allocate, num int a stat to the player based on objectives
