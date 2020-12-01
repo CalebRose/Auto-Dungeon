@@ -8,6 +8,9 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	battle "github.com/calebrose/Auto-Dungeon/BattleFunctions"
@@ -24,9 +27,17 @@ var client *db.Client
 
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
+	ex, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	exPath := filepath.Dir(ex)
+	var sb strings.Builder
+	sb.WriteString(exPath)
+	sb.WriteString("/cred/serviceAccountKey.json")
 	c := configu.Config()
 	ctx := context.Background()
-	opt := option.WithCredentialsFile(c["cred"])
+	opt := option.WithCredentialsFile(exPath + c["cred"])
 	// config := &firebase.Config{ProjectID: c["projectId"]}
 	app, err := firebase.NewApp(ctx, nil, opt)
 	if err != nil {

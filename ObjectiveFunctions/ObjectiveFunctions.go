@@ -4,7 +4,6 @@ import (
 	// "firebase.google.com/go/auth"
 	"fmt"
 	"math/rand"
-
 	"github.com/calebrose/Auto-Dungeon/structs"
 )
 
