@@ -1,6 +1,9 @@
 package structs
 
-import "math/rand"
+import (
+	"fmt"
+	"math/rand"
+)
 
 // Party - structure for party of all player characters
 type Party struct {
@@ -121,8 +124,10 @@ func (p *Party) KeepStealth(enemies []*Enemy) {
 		}
 	}
 	if roll20 || float64(count) >= (float64(len(enemies))*0.66) {
+		fmt.Println("The Party passed all persuasion checks. Stealth was retained.")
 		p.IsStealth = true
 	} else {
+		fmt.Println("The Party could not talk their way out.")
 		p.IsStealth = false
 	}
 }

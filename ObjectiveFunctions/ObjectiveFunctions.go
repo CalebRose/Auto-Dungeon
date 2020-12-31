@@ -4,6 +4,7 @@ import (
 	// "firebase.google.com/go/auth"
 	"fmt"
 	"math/rand"
+
 	"github.com/calebrose/Auto-Dungeon/structs"
 )
 
@@ -56,11 +57,13 @@ func CheckObjectiveCompletion(party structs.Party, room *structs.Room) (structs.
 					player.StatAllocation(obj.ObjectiveType, 0)
 				}
 				obj.Fulfilled = true
+				fmt.Println("Target eliminated. Objective Complete.")
 				break
 			}
 		}
 	} else if obj.ObjectiveType == "Location" {
 		if obj.TargetLocation == room.Name {
+			fmt.Println("Target location reached. Objective Complete.")
 			obj.Fulfilled = true
 		}
 	} else if obj.ObjectiveType == "Item" {

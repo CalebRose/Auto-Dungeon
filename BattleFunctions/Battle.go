@@ -69,13 +69,17 @@ func InitializeBattle(party structs.Party, enemies []*structs.Enemy, room *struc
 		if battleNode.CombatantType == "Player" {
 			// Player Turn
 			player := FindPlayer(filteredPlayers, battleNode)
+
 			useMedicalItem := false
 			if player == nil || player.Condition == "Dead" {
 				battleIterator = Iterate(battleIterator, battleSlice)
 				continue
 			}
+			println("It is " + player.Name + "'s turn in combat.")
+
 			// In Cover
 			if player.InCover == false && playerCoverCount <= room.PlayerCover {
+				println(player.Name + " took cover!")
 				player.InCover = true
 				playerCoverCount++
 			}
@@ -91,13 +95,16 @@ func InitializeBattle(party structs.Party, enemies []*structs.Enemy, room *struc
 			} else {
 
 				chosenEnemy := rand.Intn(enemyCount)
+				fmt.Printf(player.Name + " is targeting " + filteredEnemies[chosenEnemy].Name + "\n")
 				player, filteredEnemies[chosenEnemy] = SingularBattle(player, filteredEnemies[chosenEnemy], true)
 				if enemies[chosenEnemy].Condition == "Dead" {
+					fmt.Println(enemies[chosenEnemy].Name + " has died in combat.")
 					enemyCount--
 					if enemies[chosenEnemy].EnemyType == "Boss" {
 						player.StatAllocation("BossDefeated", 0)
 					}
 					if enemyCount > 0 {
+						fmt.Println("Reducing number of enemies in combat")
 						filteredEnemies = FilterEnemies(filteredEnemies)
 					}
 					player.StatAllocation("EnemyKilled", 0)
@@ -106,20 +113,27 @@ func InitializeBattle(party structs.Party, enemies []*structs.Enemy, room *struc
 		} else if battleNode.CombatantType == "Enemy" {
 			// Enemy Turn
 			enemy := FindEnemy(enemies, battleNode)
+
 			if enemy == nil || enemy.Condition == "Dead" {
 				battleIterator = Iterate(battleIterator, battleSlice)
 				continue
 			}
+
+			println("It is " + enemy.Name + "'s turn in combat.")
 			// In Cover
 			if enemy.InCover == false && enemyCoverCount <= room.EnemyCover {
+				println(enemy.Name + " took cover!")
 				enemy.InCover = true
 				enemyCoverCount++
 			}
 			chosenPlayer := rand.Intn(playerCount)
+			fmt.Printf(enemy.Name + " is targeting " + filteredPlayers[chosenPlayer].Name + "\n")
 			SingularBattle(filteredPlayers[chosenPlayer], enemy, false)
 			if filteredPlayers[chosenPlayer].Condition == "Dead" {
+				fmt.Println(filteredPlayers[chosenPlayer].Name + " is Dead.")
 				playerCount--
 				if playerCount > 0 {
+					fmt.Println("Reducing number of active players in combat...")
 					filteredPlayers = FilterPlayers(filteredPlayers)
 				}
 			}
@@ -175,6 +189,7 @@ func FilterPlayers(players []*structs.Player) []*structs.Player {
 			temp = append(temp, injuredPlayers[i])
 		}
 	}
+	fmt.Printf("Filtering down players to those who can fight.... %d fighters remain.\n", len(temp))
 	return temp
 
 }
@@ -185,14 +200,14 @@ func FindEnemy(enemies []*structs.Enemy, battleNode structs.BattleQueue) *struct
 	i := 0
 	for i < len(enemies) {
 		if battleNode.Name == enemies[i].Name {
-			if enemies[i].Condition == "Dead" {
-				return nil
+			if enemies[i].Condition != "Dead" {
+				return enemies[i]
 			}
 			break
 		}
 		i++
 	}
-	return enemies[i]
+	return nil
 }
 
 // FindPlayer - Find a player from the battle queue
@@ -201,14 +216,14 @@ func FindPlayer(players []*structs.Player, battleNode structs.BattleQueue) *stru
 	i := 0
 	for i < len(players) {
 		if battleNode.Name == players[i].Name {
-			if players[i].Condition == "Dead" {
-				return nil
+			if players[i].Condition != "Dead" {
+				return players[i]
 			}
 			break
 		}
 		i++
 	}
-	return players[i]
+	return nil
 }
 
 // SingularBattle : A turn of Battle between a player and an enemy.
@@ -236,10 +251,12 @@ func SingularBattle(player *structs.Player, enemy *structs.Enemy, playerTurn boo
 
 	// If it's the player's turn:
 	if playerTurn == true {
+		fmt.Println(player.Name + " is wielding a " + player.Weapon.Name)
 		// If the player has ammo in his gun
 		currentWeaponCartridge := player.Weapon.CurrentCartridge
 
 		if enemy.InCover == true {
+			fmt.Println(enemy.Name + " is in cover!")
 			enemyBonus = 20
 		}
 
@@ -255,12 +272,14 @@ func SingularBattle(player *structs.Player, enemy *structs.Enemy, playerTurn boo
 				shot := rand.Intn(100)
 				player.Weapon.CurrentCartridge--
 				player.StatAllocation("ShotFired", 0)
+				fmt.Println(player.Name + " takes aim...")
 				if shot <= accuracy-enemyBonus {
 					// Shot hits target
 					player.StatAllocation("ShotMade", 0)
+					fmt.Println(player.Name + " hit the target!")
 					currentPlayerStrength = currentPlayerStrength + rand.Intn(playerBaseStrength) + 1
 				} else {
-					fmt.Println("PLAYER MISSED!")
+					fmt.Println(player.Name + " missed the target!")
 				}
 			}
 
@@ -271,11 +290,12 @@ func SingularBattle(player *structs.Player, enemy *structs.Enemy, playerTurn boo
 				player.Weapon.CurrentReload = 0
 			}
 
-			fmt.Println("Reloading...")
+			fmt.Println(player.Name + " must reload their " + player.Weapon.Name)
 		}
 	} else {
 		// Enemy's turn to fire
 		if player.InCover == true {
+			fmt.Println(player.Name + " is in cover!")
 			playerBonus = 33
 		}
 
@@ -283,7 +303,7 @@ func SingularBattle(player *structs.Player, enemy *structs.Enemy, playerTurn boo
 		if enemyShot <= enemy.CombatAccuracy-playerBonus {
 			currentEnemyStrength = rand.Intn(enemyBaseStrength)
 		} else {
-			fmt.Println("ENEMY MISSED!")
+			fmt.Println(enemy.Name + " missed " + player.Name + "!")
 		}
 		playerTurn = true
 	}
@@ -293,13 +313,15 @@ func SingularBattle(player *structs.Player, enemy *structs.Enemy, playerTurn boo
 	if currentPlayerStrength > currentEnemyStrength {
 		difference = currentPlayerStrength - currentEnemyStrength
 		player.StatAllocation("DamageDone", difference)
-		fmt.Println("Player was stronger. Difference:", difference)
+		// fmt.Println("Player was stronger. Difference:", difference)
 		enemy.CurrentHP, enemy.Condition = DamageCalculation(difference, enemy.CurrentHP, enemy.HitPoints)
+		fmt.Printf(enemy.Name+" took %d Damage! "+enemy.Name+" is "+enemy.Condition+"\n", difference)
 
 	} else if currentPlayerStrength < currentEnemyStrength {
 		difference = currentEnemyStrength - currentPlayerStrength
-		fmt.Println("Enemy was stronger. Difference:", difference)
+		// fmt.Println("Enemy was stronger. Difference:", difference)
 		player.CurrentHealth, player.Condition = DamageCalculation(difference, player.CurrentHealth, player.HealthRating)
+		fmt.Printf(player.Name+" took %d Damage! "+player.Name+" is "+player.Condition+".\n", difference)
 		player.StatAllocation("DamageTaken", difference)
 		player.StatAllocation(player.Condition, 0)
 	} else {
@@ -323,7 +345,7 @@ func DamageCalculation(Damage int, currentHitpoints int, Hitpoints int) (int, st
 		condition = "Minorly Injured"
 		currHP = int(float64(Hitpoints) * 0.8)
 	} else if float64(currHP) > math.Floor(float64(Hitpoints)*0.4) {
-		condition = "Major Injury"
+		condition = "Majorly Injured"
 		currHP = int(float64(Hitpoints) * 0.6)
 	} else if float64(currHP) > math.Floor(float64(Hitpoints)*0.2) {
 		condition = "Severely Injured"
@@ -347,11 +369,13 @@ func Revealed(players []*structs.Player) bool {
 					// Modify roll with player's attributes
 					if roll > (30 + player.Proficiencies.Stealth.Level) {
 						// Reveal
+						fmt.Println("The party was revealed from stealth!")
 						return false
 					}
 				}
 			}
 		}
 	}
+	fmt.Println("The Party avoided being detected!")
 	return true
 }

@@ -1,6 +1,7 @@
 package structs
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 )
@@ -37,6 +38,7 @@ func (r *Room) LoadEnemies(enemiesJSON []Enemy) {
 		r.Enemies = append(r.Enemies, &chosenEnemy)
 
 	}
+	fmt.Println("Loading enemies in room...")
 }
 
 // LoadDiscoveries - Load Discoveries into room
@@ -57,5 +59,5 @@ func (r *Room) LoadDiscoveries(discoveries []*Discovery) {
 		chosenDiscovery := discoveries[discoRoll]
 		r.Discoveries = append(r.Discoveries, chosenDiscovery)
 	}
-
+	fmt.Println("Loading discoveries in room...")
 }

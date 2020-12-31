@@ -26,6 +26,7 @@ import (
 var client *db.Client
 
 func main() {
+	fmt.Printf("Seed: %d", time.Now().UTC().UnixNano())
 	rand.Seed(time.Now().UTC().UnixNano())
 	ex, err := os.Executable()
 	if err != nil {
@@ -50,6 +51,7 @@ func main() {
 
 	// Load Assets
 	Mission := mis.Mission{
+		MissionID:          0,
 		MissionName:        "Test Mission",
 		Location:           "The Walderlund",
 		MissionEnemies:     []structs.Enemy{},
@@ -83,6 +85,8 @@ func main() {
 	// Players
 	// docsnap := client.Collection("Players").Documents(ctx)
 	// Grabs all players that are set to "Ready"
+	// whereClause := fmt.Sprintf("Missions.%d.Ready", Mission.MissionID)
+	// docsnap := client.Collection("Players").Where(whereClause, "==", true).Documents(ctx)
 	docsnap := client.Collection("Players").Where("Ready", "==", true).Documents(ctx)
 
 	defer docsnap.Stop()
@@ -103,6 +107,7 @@ func main() {
 		player.StatAllocation("Mission", 0)
 		party.Members = append(party.Members, &player)
 	}
+	fmt.Printf("Party loaded... there are %d players in this mission.\n", len(party.Members))
 	// Set Party Behaviors
 	party.SetBehaviors(party.Members)
 
@@ -125,9 +130,9 @@ func main() {
 		Visited:        false,
 		Locked:         false,
 		Continuous:     false,
-		PlayerCover:    3,
-		EnemyCover:     0,
-		InitEnemyCount: 0,
+		PlayerCover:    2,
+		EnemyCover:     1,
+		InitEnemyCount: 3,
 		Enemies:        []*structs.Enemy{},
 		Discoveries:    []*structs.Discovery{},
 		Edges:          []string{"Room2"},
@@ -138,22 +143,40 @@ func main() {
 		Name:           "TestRoom2",
 		RoomType:       "Room",
 		RoomConditions: "?",
+		Description:    "This is the second room. Have fun!",
+		Visited:        false,
+		Locked:         false,
+		Continuous:     false,
+		PlayerCover:    1,
+		EnemyCover:     2,
+		InitEnemyCount: 3,
+		Enemies:        []*structs.Enemy{},
+		Discoveries:    []*structs.Discovery{},
+		Edges:          []string{"Room3"},
+		Key:            "Room2",
+	}
+
+	testRoom3 := structs.Room{
+		Name:           "TestRoom3",
+		RoomType:       "Room",
+		RoomConditions: "?",
 		Description:    "This is a test room",
 		Visited:        false,
 		Locked:         false,
 		Continuous:     false,
 		PlayerCover:    3,
-		EnemyCover:     0,
-		InitEnemyCount: 3,
+		EnemyCover:     3,
+		InitEnemyCount: 5,
 		Enemies:        []*structs.Enemy{},
 		Discoveries:    []*structs.Discovery{},
 		Edges:          []string{},
-		Key:            "Room2",
+		Key:            "Room3",
 	}
 	fmt.Println(testRoom)
 	// Map rooms to Graph
 	graph.AddVertex(&testRoom)
 	graph.AddVertex(&testRoom2)
+	graph.AddVertex(&testRoom3)
 	fmt.Println(graph)
 	// Starting Room
 	party.CurrentRoom = InitializeStartingPoint(graph.AdjList)
@@ -182,6 +205,9 @@ func main() {
 			currentRoom.LoadDiscoveries(Mission.MissionDiscoveries)
 		}
 
+		fmt.Println("The Party has entered " + currentRoom.Name)
+		fmt.Printf("There are %d enemies in the area.\n", len(currentRoom.Enemies))
+
 		// Check for Enemies
 
 		if len(currentRoom.Enemies) > 0 {
@@ -190,17 +216,21 @@ func main() {
 			if party.IsStealth {
 				// Roll for detection?
 				// How can I do a precision bonus?
+				fmt.Println("Rolling for detection...")
 				DetectionRoll := rand.Intn(100) + 1
 				partyStealth := party.PartyBehavior.PartyStealth
 				if DetectionRoll+partyStealth > 40 {
 					// Keep Stealth, duh.
+					fmt.Println("The Party was not detected upon entering " + currentRoom.Name)
 				} else {
 					// Party is seen.
+					fmt.Println("The Party was seen!")
 					party.KeepStealth(currentRoom.Enemies)
 				}
 			}
 			// Initiate Battle
 			if !party.IsStealth || rand.Intn(20) > 4 {
+				fmt.Println("The Party has engaged in combat!")
 				party.Members = battle.InitializeBattle(party, currentRoom.Enemies, currentRoom)
 			}
 
@@ -225,7 +255,10 @@ func main() {
 			if len(currentRoom.Discoveries) > 0 {
 				// Roll for Discoveries
 				// Loop through each player and run a check on discovering something
+				fmt.Println("The Party is making a discovery...")
 				party.Members, currentRoom.Discoveries = dis.MakeDiscovery(party, currentRoom.Discoveries)
+			} else {
+				fmt.Println("There are no discoveries to be made in " + currentRoom.Name + ".")
 			}
 
 			// Check Objectives
@@ -249,7 +282,7 @@ func main() {
 				}
 				player.StatAllocation("ObjectivesCompleted", len(party.Objectives))
 			}
-
+			fmt.Println("The Party could not meet all mission objectives and must retreat!")
 			party.InRetreat = true
 		}
 
@@ -331,14 +364,18 @@ func main() {
 	}
 	// Log status of each player
 	// Update all player objects into Firebase
-	for _, player := range party.Members {
-		playerRef := client.Collection("Players").Doc("Cayetano") // Replace with Discord ID
-		// playerJSON, err := json.Marshal(party.Members[0])
-		// if err != nil {
-		// 	fmt.Println(err)
-		// }
-		playerRef.Set(ctx, player)
-	}
+	/*
+		for _, player := range party.Members {
+			// Give players money
+
+			playerRef := client.Collection("Players").Doc("Cayetano") // Replace with Discord ID
+			// playerJSON, err := json.Marshal(party.Members[0])
+			// if err != nil {
+			// 	fmt.Println(err)
+			// }
+			playerRef.Set(ctx, player)
+		}
+	*/
 
 }
 

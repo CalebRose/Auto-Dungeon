@@ -11,6 +11,7 @@ import (
 
 // Mission - the structure for the mission
 type Mission struct {
+	MissionID			int
 	MissionName			string
 	Location			string
 	MissionEnemies		[]structs.Enemy
@@ -19,7 +20,8 @@ type Mission struct {
 
 // LoadEnemies - Function to load enemies
 func (m *Mission) LoadEnemies() {
-	enemiesJSON, err := os.Open("../MissionData/Enemies.json")
+	fmt.Println("Loading enemies...")
+	enemiesJSON, err := os.Open("c:/Users/ctros/go/src/github.com/CalebRose/Auto-Dungeon/MissionData/Enemies.json")
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -28,15 +30,17 @@ func (m *Mission) LoadEnemies() {
 	enemiesByte, _ := ioutil.ReadAll(enemiesJSON)
 	json.Unmarshal(enemiesByte, &enemies)
 
+	fmt.Println("Enemies loaded.")
 	m.MissionEnemies = enemies
 }
 
 // LoadDiscoveries - Function to load discoveries
 func (m *Mission) LoadDiscoveries() {
+	fmt.Println("Loading discoveries to find...")
 	globalDiscoveries := []*structs.Discovery{}
 	regionalDiscoveries := []*structs.Discovery{}
 	regionString := ""
-	discoveriesJSON, err := os.Open("../MissionData/Discoveries.json")
+	discoveriesJSON, err := os.Open("c:/Users/ctros/go/src/github.com/CalebRose/Auto-Dungeon/MissionData/Discoveries.json")
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -75,5 +79,6 @@ func (m *Mission) LoadDiscoveries() {
 	regDiscoByte, _ := ioutil.ReadAll(regionalDiscoveriesJSON)
 	json.Unmarshal(regDiscoByte, &regionalDiscoveries)
 
+	fmt.Println("Discoveries loaded.")
 	m.MissionDiscoveries = append(m.MissionDiscoveries, regionalDiscoveries...)
 }

@@ -1,5 +1,7 @@
 package structs
 
+import "fmt"
+
 // Player - structure for player character
 type Player struct {
 	Username           string
@@ -24,6 +26,7 @@ type Player struct {
 	InCover            bool
 	Ready              bool
 	HasFought          bool
+	Currencies         Currency
 	// Feats              []Feat
 }
 
@@ -87,6 +90,7 @@ func (pl *Player) UseMedicalItem() {
 			continue
 		}
 		pl.CurrentHealth += item.ItemValue
+		fmt.Printf(pl.Name + "used a " + item.Name + " to heal for %d.\n")
 		pl.Inventory[length-1], pl.Inventory[i] = pl.Inventory[i], pl.Inventory[length-1]
 		pl.Inventory = pl.Inventory[:length-1]
 	}
